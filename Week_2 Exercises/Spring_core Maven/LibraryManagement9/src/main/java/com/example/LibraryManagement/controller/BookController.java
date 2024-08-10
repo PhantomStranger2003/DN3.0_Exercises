@@ -3,9 +3,12 @@ package com.example.LibraryManagement.controller;
 import com.example.LibraryManagement.model.Book;
 import com.example.LibraryManagement.repository.BookRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/books")
@@ -19,8 +22,10 @@ public class BookController {
     }
 
     @GetMapping("/{id}")
-    public Book getBookById(@PathVariable Long id) {
-        return bookRepository.findById(id).orElseThrow(() -> new RuntimeException("Book not found with id " + id));
+    public ResponseEntity<Book> getBookById(@PathVariable Long id) {
+        Optional<Book> book = bookRepository.findById(id);
+        return book.map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
     @PostMapping
@@ -28,20 +33,44 @@ public class BookController {
         return bookRepository.save(book);
     }
 
+//    @PutMapping("/{id}")
+//    public Book updateBook(@PathVariable Long id, @RequestBody Book bookDetails) {
+//        Book book = bookRepository.findById(id).orElseThrow(() -> new RuntimeException("Book not found with id " + id));
+//
+//        book.setTitle(bookDetails.getTitle());
+//        book.setAuthor(bookDetails.getAuthor());
+//        book.setIsbn(bookDetails.getIsbn());
+//
+//        return bookRepository.save(book);
+//    }
+
     @PutMapping("/{id}")
-    public Book updateBook(@PathVariable Long id, @RequestBody Book bookDetails) {
-        Book book = bookRepository.findById(id).orElseThrow(() -> new RuntimeException("Book not found with id " + id));
-
-        book.setTitle(bookDetails.getTitle());
-        book.setAuthor(bookDetails.getAuthor());
-        book.setIsbn(bookDetails.getIsbn());
-
-        return bookRepository.save(book);
+    public ResponseEntity<Book> updateBook(@PathVariable Long id, @RequestBody Book bookDetails) {
+        Optional<Book> optionalBook = bookRepository.findById(id);
+        if (optionalBook.isPresent()) {
+            Book book = optionalBook.get();
+            book.setTitle(bookDetails.getTitle());
+            book.setAuthor(bookDetails.getAuthor());
+            book.setIsbn(bookDetails.getIsbn());
+            return ResponseEntity.ok(bookRepository.save(book));
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 
+//    @DeleteMapping("/{id}")
+//    public void deleteBook(@PathVariable Long id) {
+//        Book book = bookRepository.findById(id).orElseThrow(() -> new RuntimeException("Book not found with id " + id));
+//        bookRepository.delete(book);
+//    }
+
     @DeleteMapping("/{id}")
-    public void deleteBook(@PathVariable Long id) {
-        Book book = bookRepository.findById(id).orElseThrow(() -> new RuntimeException("Book not found with id " + id));
-        bookRepository.delete(book);
+    public ResponseEntity<Void> deleteBook(@PathVariable Long id) {
+        if (bookRepository.existsById(id)) {
+            bookRepository.deleteById(id);
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 }
